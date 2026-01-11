@@ -239,9 +239,6 @@
     <Compile Include="Windows\AddAccount.xaml.cs">
       <DependentUpon>AddAccount.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Windows\Donate.xaml.cs">
-      <DependentUpon>Donate.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Pages\ManageAccount.xaml.cs">
       <DependentUpon>ManageAccount.xaml</DependentUpon>
     </Compile>
@@ -249,9 +246,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Pages\Settings.xaml.cs">
       <DependentUpon>Settings.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Update\Amemiya.Net.WebClientEx.cs">
-      <SubType>Component</SubType>
     </Compile>
     <Compile Include="Update\ApplicationUpdater.cs" />
     <Compile Include="Pages\VerifyPage.xaml.cs">
@@ -350,10 +344,6 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Windows\AddAccount.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Windows\Donate.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -490,10 +480,6 @@
     <Resource Include="Resources\refresh.png" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\QRCode_WeChat.png" />
-    <Resource Include="Resources\QRCode_Alipay.png" />
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Resources\Scroll_Black.png" />
   </ItemGroup>
   <ItemGroup>
@@ -518,10 +504,12 @@
     <Resource Include="Resources\Scroll_SM.png" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\QRCode_QQPay.png" />
+    <Resource Include="Resources\QRCode_Tip.png" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\QRCode_Tip.png" />
+    <EmbeddedResource Include="LocaleRemulator\LRConfig.xml">
+      <LogicalName>LRConfig.xml</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="LocaleRemulator\LRHookx32.dll">
@@ -534,8 +522,13 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="LocaleRemulator\LRProc.dll">
-      <LogicalName>LRProc.dll</LogicalName>
+    <EmbeddedResource Include="LocaleRemulator\LRProc.exe">
+      <LogicalName>LRProc.exe</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="LocaleRemulator\LRSubMenus.dll">
+      <LogicalName>LRSubMenus.dll</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
@@ -551,10 +544,6 @@
       </EmbeddedResource>
     </ItemGroup>
   </Target>
-  <PropertyGroup>
-    <PreBuildEvent>echo copy LRProc.dll
-copy $(SolutionDir)Build\$(Configuration)\LRProc.dll $(SolutionDir)Beanfun\LocaleRemulator\LRProc.dll /y</PreBuildEvent>
-  </PropertyGroup>
   <Import Project="..\packages\Microsoft.Web.WebView2.1.0.1343.22\build\Microsoft.Web.WebView2.targets" Condition="Exists('..\packages\Microsoft.Web.WebView2.1.0.1343.22\build\Microsoft.Web.WebView2.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>

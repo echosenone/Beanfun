@@ -1,5 +1,4 @@
-﻿using Amemiya.Net;
-using IniParser;
+﻿using IniParser;
 using IniParser.Model;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
@@ -11,7 +10,6 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -349,7 +347,7 @@ namespace Beanfun
             catch (Exception ex)
             {
                 Console.WriteLine(ex.StackTrace);
-                MessageBox.Show(string.Format((TryFindResource("LoadDataError") as string).Replace("\\r\\n", "\r\n"), ex.Message)/* + "\r\n\r\n" + ex.StackTrace*/);
+                MessageBox.Show(string.Format(Regex.Unescape(TryFindResource("LoadDataError") as string), ex.Message)/* + "\r\n\r\n" + ex.StackTrace*/);
 
                 new LoginRegionSelection().ShowDialog();
             }
@@ -426,7 +424,7 @@ namespace Beanfun
                 BitmapImage image;
                 try
                 {
-                    byte[] buffer = new WebClientEx().DownloadData(url);
+                    byte[] buffer = new WebClient().DownloadData(url);
                     image = new BitmapImage();
                     image.BeginInit();
                     image.StreamSource = new MemoryStream(buffer);
@@ -597,7 +595,7 @@ namespace Beanfun
             if (!GameList.ContainsKey(App.LoginRegion.ToLower()))
             {
                 List<GameService> gameList = new List<GameService>();
-                WebClient wc = new WebClientEx();
+                WebClient wc = new WebClient();
 
                 string res = Encoding.UTF8.GetString(wc.DownloadData("https://" + (App.LoginRegion == "HK" ? "bfweb.hk" : "tw") + ".beanfun.com/beanfun_block/generic_handlers/get_service_ini.ashx"));
 
@@ -610,7 +608,6 @@ namespace Beanfun
                 {
                     string json = reg.Match(res).Groups[1].Value;
                     bool newJson = new Regex("^\\[(.*)\\]$").IsMatch(json);
-                    Console.WriteLine(json);
                     if (newJson)
                     {
                         JArray jsons = JArray.Parse(json);
@@ -1030,7 +1027,7 @@ namespace Beanfun
                     break;
             }
 
-            MessageBox.Show(I18n.ToSimplified(msg).Replace("\\r\\n", "\r\n"), title);
+            MessageBox.Show(Regex.Unescape(I18n.ToSimplified(msg)), title);
             if (method == 0)
                 App.Current.Shutdown();
             else if (method == 1)
@@ -1147,7 +1144,7 @@ namespace Beanfun
                         errexit("LoginUnknown", 1);
                         return;
                     }
-                    loginWaitPage.t_Info.Content = (TryFindResource("MsgNeedBeanfunAuth") as string).Replace("\\r\\n", "\r\n");
+                    loginWaitPage.t_Info.Content = Regex.Unescape(TryFindResource("MsgNeedBeanfunAuth") as string);
                     bfAPPAutoLogin.IsEnabled = true;
                 }
                 else
@@ -1276,7 +1273,7 @@ namespace Beanfun
                         errexit("LoginUnknown", 1);
                         return;
                     }
-                    loginWaitPage.t_Info.Content = (TryFindResource("MsgNeedBeanfunAuth") as string).Replace("\\r\\n", "\r\n");
+                    loginWaitPage.t_Info.Content = Regex.Unescape(TryFindResource("MsgNeedBeanfunAuth") as string);
                     bfAPPAutoLogin.IsEnabled = true;
                 }
                 else
@@ -1480,7 +1477,6 @@ namespace Beanfun
             {
                 Console.WriteLine("try open game");
                 int runMode = int.Parse(ConfigAppSettings.GetValue("startGameMode", "0"));
-                bool is64BitGame = false;
                 if (runMode == (int)GameStartMode.Auto)
                 {
                     switch (WindowsAPI.GetSystemDefaultLocaleName())
@@ -1493,11 +1489,6 @@ namespace Beanfun
                             runMode = (int)GameStartMode.Normal;
                             break;
                         default:
-                            WindowsAPI.BinaryType bt;
-                            if (WindowsAPI.GetBinaryType(gamePath, out bt))
-                            {
-                                is64BitGame = bt == WindowsAPI.BinaryType.SCS_64BIT_BINARY;
-                            }
                             if (App.OSVersion < App.WinVista)
                             {
                                 errexit(TryFindResource("MsgLEDoNotSupportXP") as string, 2);
@@ -1525,7 +1516,7 @@ namespace Beanfun
                 switch (runMode)
                 {
                     case (int)GameStartMode.LocaleRemulator:
-                        startByLR(gamePath, commandLine, is64BitGame);
+                        startByLR(gamePath, commandLine);
                         break;
                     case (int)GameStartMode.Normal:
                         ProcessStartInfo startInfo = new ProcessStartInfo(gamePath);
@@ -1539,15 +1530,16 @@ namespace Beanfun
             catch(Exception ex)
             {
                 Console.WriteLine(ex.ToString());
-                errexit((TryFindResource("MsgLocalePluginRunError") as string).Replace("\\r\\n", "\r\n"), 2);
+                errexit(Regex.Unescape(TryFindResource("MsgLocalePluginRunError") as string), 2);
             }
         }
 
-        private void startByLR(string path, string command, bool is64BitGame)
+        private void startByLR(string path, string command)
         {
-            if (App.ReleaseResource("LRProc.dll") == -1 || App.ReleaseResource("LRHookx32.dll") == -1 || App.ReleaseResource("LRHookx64.dll") == -1)
+            if (App.ReleaseResource("LRConfig.xml") == -1 || App.ReleaseResource("LRHookx32.dll") == -1 ||
+                App.ReleaseResource("LRHookx64.dll") == -1 || App.ReleaseResource("LRProc.exe") == -1 ||
+                App.ReleaseResource("LRSubMenus.dll") == -1)
                 MessageBox.Show(TryFindResource("MsgLocalePluginReleaseError") as string);
-            string dllPath = string.Format("{0}\\{1}", System.Environment.CurrentDirectory, "LRHookx32.dll");
 
             var commandLine = string.Empty;
             commandLine = path.StartsWith("\"")
@@ -1559,18 +1551,21 @@ namespace Beanfun
             new Thread(new ThreadStart(() => {
                 try
                 {
-                    LRInject(path, Path.GetDirectoryName(path), commandLine, dllPath, (uint)culInfo.ANSICodePage, App.OSVersion >= App.Win8 && is64BitGame);
+                    var proc = new Process();
+                    proc.StartInfo.FileName = System.Environment.CurrentDirectory + "\\LRProc.exe";
+                    proc.StartInfo.Arguments = "ef3e7b42-a87c-4c07-ae3e-eeebeef12762 " + commandLine;
+                    proc.StartInfo.WorkingDirectory = Path.GetDirectoryName(path);
+                    proc.StartInfo.UseShellExecute = true;
+                    proc.StartInfo.Verb = "runas";
+                    proc.Start();
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine(ex.ToString());
-                    errexit((TryFindResource("MsgLocalePluginRunError") as string).Replace("\\r\\n", "\r\n"), 2);
+                    errexit(Regex.Unescape(TryFindResource("MsgLocalePluginRunError") as string), 2);
                 }
             })).Start();
         }
-
-        [DllImport("LRProc.dll", EntryPoint = "LRInject", CharSet = CharSet.Ansi ,CallingConvention = CallingConvention.Cdecl)]
-        public static extern int LRInject(string application, string workpath, string commandline, string dllpath, uint CodePage, bool HookIME);
 
         public bool AddServiceAccount(string name)
         {
@@ -1744,26 +1739,25 @@ namespace Beanfun
                         {
                             hWnd = WindowsAPI.FindWindow("MapleStoryClassTW", null);
                         }
-                        if ((bool)accountList.autoPaste.IsChecked && accountList.autoPaste.Visibility == Visibility.Visible)
+                        if (hWnd == IntPtr.Zero || !(bool)accountList.autoPaste.IsChecked || accountList.autoPaste.Visibility != Visibility.Visible)
                         {
-                            if (hWnd == IntPtr.Zero)
+                            try
                             {
-                                try
-                                {
-                                    Clipboard.SetText(accountList.t_Password.Text);
-                                    MessageBox.Show(TryFindResource("GetOtpSuccessAndCopy") as string);
-                                }
-                                catch { }
+                                Clipboard.SetText(accountList.t_Password.Text);
+                                MessageBox.Show(TryFindResource("GetOtpSuccessAndCopy") as string);
                             }
-                            else
+                            catch { }
+                        }
+                        else
+                        {
+                            System.Drawing.Size wndSize = System.Drawing.Size.Empty;
+                            if (hWnd != IntPtr.Zero)
                             {
-                                double dpixRatio = 1.0;
-                                if (hWnd != IntPtr.Zero)
-                                {
-                                    System.Drawing.Graphics currentGraphics = System.Drawing.Graphics.FromHwnd(hWnd);
-                                    dpixRatio = currentGraphics.DpiX / 96.0;
-                                }
+                                wndSize = WindowsAPI.GetClientAreaSize(hWnd);
+                            }
 
+                            if (wndSize != System.Drawing.Size.Empty)
+                            {
                                 const int WM_KEYDOWN = 0X100;
                                 const int WM_LBUTTONDOWN = 0x0201;
                                 const byte VK_BACK = 0x0008;
@@ -1773,7 +1767,7 @@ namespace Beanfun
                                 const byte VK_END = 0x0023;
                                 WindowsAPI.SetForegroundWindow(hWnd);
                                 Thread.Sleep(100);
-                                if  ("610074".Equals(service_code) && "T9".Equals(service_region))
+                                if ("610074".Equals(service_code) && "T9".Equals(service_region))
                                 {
                                     // 按下ESC關閉提示框
                                     WindowsAPI.PostKey(hWnd, WM_KEYDOWN, VK_ESCAPE);
@@ -1783,7 +1777,7 @@ namespace Beanfun
                                     WindowsAPI.GetCursorPos(ref oldPoint);
                                     System.Drawing.Point point = new System.Drawing.Point(0, 0);
                                     WindowsAPI.ClientToScreen(hWnd, ref point);
-                                    System.Drawing.Point textBoxPoint = new System.Drawing.Point((int)(500 * dpixRatio), (int)(338 * dpixRatio));
+                                    System.Drawing.Point textBoxPoint = new System.Drawing.Point((int)(wndSize.Width * 0.5), (int)(wndSize.Height * 0.4));
                                     WindowsAPI.SetCursorPos(point.X + textBoxPoint.X, point.Y + textBoxPoint.Y);
                                     int pos = (textBoxPoint.X & 0xFFFF) | (textBoxPoint.Y << 16);
                                     WindowsAPI.PostMessage(hWnd, WM_LBUTTONDOWN, 1, pos);
@@ -2084,7 +2078,7 @@ namespace Beanfun
                 }
                 bool isCanUpdate = ClientMapleMajor != 0 && SrvMapleMajor != 0 && ClientMapleMajor >= (SrvMapleMajor - 2);
                 MessageBoxResult result = MessageBox.Show(
-                    string.Format((TryFindResource("MsgKillPatcher") as string).Replace("\\r\\n", "\r\n"), info,
+                    string.Format(Regex.Unescape(TryFindResource("MsgKillPatcher") as string), info,
                         isCanUpdate && ClientMapleMajor == SrvMapleMajor ? $"V{ SrvMapleMajor }.{ SrvMapleMinor.Split(':')[0] }fix" : "",
                         isCanUpdate ? TryFindResource("UpdateByPatch") : TryFindResource("UpdateByFullClient"),
                         isCanUpdate ? TryFindResource("GamePatch") : TryFindResource("GameFullClient")), TryFindResource("WarningByBeanfun") as string, MessageBoxButton.YesNo);
